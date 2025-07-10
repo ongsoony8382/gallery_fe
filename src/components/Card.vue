@@ -2,8 +2,9 @@
 import { useAccountStore } from '@/stores/account';
 import { computed } from 'vue';
 import { addItem } from '@/services/cartService';
+import { useRouter } from 'vue-router';
 
-
+const router = useRouter();
 const account = useAccountStore();
 
 //프로퍼티 객체
@@ -35,12 +36,20 @@ const put = async () => {
   }
 
   const res = await addItem(props.item.id);
-  if (res === undefined || res.status !== 200) {
-    return;
-  }
-  console.log('카트 담기 성공!');
-};
 
+  if (res === undefined) {
+    alert('서버 문제');
+    return;
+  } else if (res.status === 500) {
+    alert('이미 담은 물건입니다.');
+  } else if (
+    res.status === 200 &&
+    confirm('장바구니에 상품을 담았습니다. 장바구니로 이동하시겠습니까?')
+  ) {
+    console.log('카트 담기 성공!');
+    router.push('/cart');
+  }
+};
 </script>
 
 <template>

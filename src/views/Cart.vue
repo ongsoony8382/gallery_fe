@@ -1,26 +1,46 @@
 <script setup>
 import { reactive, onMounted } from 'vue';
-import { getItems } from '@/services/cartService'; 
-
+import { getItems, removeItem, removeAllItem } from '@/services/cartService';
 
 const state = reactive({
   items: [],
 });
 
 const load = async () => {
-    const res = await getItems();
-    if (res.status !== 200) {
+  const res = await getItems();
+  if (res.status !== 200) {
     return;
   }
   console.log('res.data:', res.data);
   state.items = res.data;
 };
 
-const remove = async (itemId) => {};
-
 onMounted(() => {
-    load();
+  load();
 });
+
+
+const remove = async (cartId) => {
+  const res = await removeItem(cartId);
+  console.log(res);
+  if (res === undefined || res.status != 200) {
+    return;
+  }
+  // 다시 리로딩 하거나
+  // 또는 방금 삭제한 객체만 state.items에서 삭제한다.
+  load();
+};
+
+
+const clear = async () => {
+  const res = await removeAllItem();
+  console.log(res);
+  if(res === undefined || res.status != 200){
+    return;
+  };
+  state.items = [];
+}
+
 </script>
 
 <template>
@@ -47,7 +67,9 @@ onMounted(() => {
             >
           </li>
         </ul>
-        <div class="act">
+
+        <div class="act d-flex justify-content-between">
+          <button @click="clear" class="btn btn-danger">장바구니 비우기</button>
           <router-link to="/order" class="btn btn-primary"
             >주문하기</router-link
           >
