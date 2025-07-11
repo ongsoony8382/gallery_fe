@@ -3,9 +3,7 @@ import { reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getItems } from '@/services/cartService';
 import { addOrder } from '@/services/orderService';
-
 const router = useRouter();
-
 const state = reactive({
   items: [],
   form: {
@@ -13,49 +11,53 @@ const state = reactive({
     address: '',
     payment: 'card',
     cardNumber: '',
-    itemIds: [], //[1,2]
+    itemIds: [],
   },
 });
-
 onMounted(async () => {
   const res = await getItems();
   if (res.status !== 200) {
     return;
   }
-  console.log('res.data:', res.data);
   state.items = res.data;
 });
-
+// 최종 결제 금액
+const computedTotalPrice = computed(() => {
+  return state.items.reduce((sum, item) => {
+    const discounted = item.price - (item.price * item.discountPer) / 100;
+    return sum + discounted;
+  }, 0);
+});
+//주문 데이터 제출
 const submit = async () => {
   if (state.form.payment !== 'card') {
-    // 결제 수단이 카드가 아니라는 말은 무통장 입금이라는 의미
-    // 카드 번호를 지운다.
     state.form.cardNumber = '';
   }
-
   state.form.itemIds = state.items.map((item) => item.itemId);
   const res = await addOrder(state.form);
+  if (res.status === 200) {
+    const messages = ['주문이 완료되었습니다.'];
+    if (state.form.payment === 'bank') {
+      const price = computedTotalPrice.value.toLocaleString();
+      messages.push(
+        `한국은행 123-45678-777 계좌로 ${price}원을 입금해주시기 바랍니다.`
+      );
+    }
+    window.alert(messages.join('\n'));
+    await router.push('/');
+  }
 };
-
-const computedTotalPrice = computed(() => {
-  let sum = 0;
-  state.items.forEach((item) => {
-    sum += item.price;
-  });
-  return sum;
-});
 </script>
-
 <template>
   <form class="order-form" @submit.prevent="submit">
     <div class="container">
       <div class="py-5 text-center">
-        <div class="h4">주문하기</div>
+        <div class="order-title">주문하기</div>
       </div>
       <p class="h6 font-lg mt-3">
         주문 내역을 확인하시고 주문하기 버튼을 클릭해주세요
       </p>
-      <div class="row g-5">
+      <div class="row g-5 mt-4 justify-content-center">
         <!-- 오른쪽 주문 정보 -->
         <div class="col-md-5 col-lg-4 order-md-last">
           <div class="mb-3">
@@ -157,5 +159,13 @@ const computedTotalPrice = computed(() => {
     </div>
   </form>
 </template>
-
-<style scoped></style>
+<style scoped>
+.order-title {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 600;
+  font-size: 30px;
+  color: #333;
+  text-align: center;
+  margin-top: -18px;
+}
+</style>
